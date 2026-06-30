@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="theme-color" content="#0f2419"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="வாடகை கணக்கு"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png"/>
+<link rel="apple-touch-icon" href="./icon-192.png"/>
+<link rel="apple-touch-icon" sizes="152x152" href="./icon-152.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="./icon-192.png"/>
+<title>வாடகை கணக்கு — Rental Tracker</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.ic{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1em;vertical-align:-0.125em;}
+.ic svg{width:100%;height:100%;}
+.ic-lg{width:1.3em;height:1.3em;}
+.ic-xl{width:1.6em;height:1.6em;}
+
+:root{
+  --bg:#f0f4f0;--surface:#fff;--surface2:#f7f9f7;
+  --primary:#0f2419;--primary2:#1a3a28;--primary3:#2d6147;
+  --accent:#e8a020;--accent2:#fff3dc;
+  --text:#111827;--text2:#6b7280;--text3:#9ca3af;--border:#e5e7eb;
+  --green:#16a34a;--green-bg:#dcfce7;
+  --red:#dc2626;--red-bg:#fee2e2;
+  --amber:#d97706;--amber-bg:#fef3c7;
+  --blue:#2563eb;--blue-bg:#dbeafe;
+  --purple:#7c3aed;--purple-bg:#ede9fe;
+  --teal:#0d9488;--teal-bg:#ccfbf1;
+  --r:16px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* TOPBAR */
+.topbar{background:linear-gradient(135deg,var(--primary) 0%,var(--primary2) 100%);padding:14px 16px 0;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2);}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.topbar-icon{width:36px;height:36px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.topbar-title{color:#fff;font-size:16px;font-weight:800;}
+.topbar-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:1px;}
+.topbar-actions{display:flex;gap:6px;align-items:center;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#6b7280;flex-shrink:0;}
+.sync-dot.online{background:#4ade80;} .sync-dot.syncing{background:var(--accent);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.icon-btn{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:10px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:inherit;}
+.icon-btn:hover{background:rgba(255,255,255,.22);}
+.nav-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.tab-btn{flex:1;min-width:60px;padding:9px 6px 11px;border:none;background:transparent;color:rgba(255,255,255,.5);font-size:11px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;font-family:inherit;}
+.tab-btn.active{color:#fff;border-bottom-color:var(--accent);}
+.tab-label{font-size:10px;}
+.install-banner{display:none;align-items:center;gap:10px;background:linear-gradient(135deg,var(--accent),#d68f1a);border-radius:12px;padding:11px 14px;margin-bottom:12px;color:#fff;box-shadow:var(--shadow);}
+.install-banner.show{display:flex;}
+.install-banner .ib-text{flex:1;}
+.install-banner .ib-title{font-size:13px;font-weight:700;}
+.install-banner .ib-sub{font-size:11px;opacity:.85;margin-top:1px;}
+.install-banner button{background:rgba(255,255,255,.25);border:none;color:#fff;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;}
+.install-banner .ib-close{background:transparent;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0;}
+
+/* LAYOUT */
+.content{padding:14px;max-width:600px;margin:0 auto;}
+.section{display:none;}.section.active{display:block;}
+
+/* MONTH BAR */
+.month-bar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:var(--r);padding:11px 14px;margin-bottom:14px;box-shadow:var(--shadow);}
+.month-nav{background:var(--bg);border:1.5px solid var(--border);width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);}
+.month-label{font-size:15px;font-weight:700;} .month-sub{font-size:11px;color:var(--text3);text-align:center;margin-top:1px;}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-card{border-radius:var(--r);padding:14px;}
+.stat-card .s-icon{font-size:20px;margin-bottom:6px;}
+.stat-card .s-val{font-size:20px;font-weight:800;letter-spacing:-.5px;line-height:1;}
+.stat-card .s-lbl{font-size:11px;font-weight:600;margin-top:3px;opacity:.75;}
+.s-green{background:var(--green-bg);}.s-green .s-val{color:var(--green);}
+.s-red{background:var(--red-bg);}.s-red .s-val{color:var(--red);}
+.s-amber{background:var(--amber-bg);}.s-amber .s-val{color:var(--amber);}
+.s-blue{background:var(--blue-bg);}.s-blue .s-val{color:var(--blue);}
+
+/* CARD */
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden;}
+.card-head{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.card-head-left{display:flex;align-items:center;gap:10px;}
+.card-head-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.card-head h2{font-size:14px;font-weight:700;} .card-sub{font-size:11px;color:var(--text2);margin-top:1px;}
+.card-body{padding:4px 0;} .card-pad{padding:12px 14px;}
+
+/* UNIT ROW — no click action, just display */
+.unit-row{display:flex;align-items:flex-start;padding:11px 14px;border-bottom:1px solid var(--border);gap:11px;}
+.unit-row:last-child{border-bottom:none;}
+.unit-avatar{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;margin-top:1px;}
+.unit-info{flex:1;min-width:0;}
+.unit-name{font-size:13px;font-weight:700;}
+.unit-meta{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.5;}
+.unit-actions{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.unit-amt{font-size:15px;font-weight:800;text-align:right;}
+.unit-status-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;display:inline-block;}
+.tag-paid{background:var(--green-bg);color:var(--green);}
+.tag-partial{background:var(--blue-bg);color:var(--blue);}
+.tag-pending{background:var(--amber-bg);color:var(--amber);}
+.tag-overdue{background:var(--red-bg);color:var(--red);}
+.tag-vacant{background:var(--purple-bg);color:var(--purple);}
+.tag-occupied{background:var(--teal-bg);color:var(--teal);}
+
+/* EDIT PENCIL BTN */
+.edit-rent-btn{background:var(--bg);border:1.5px solid var(--border);color:var(--text2);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;}
+.edit-rent-btn:hover{background:var(--border);}
+
+/* LEDGER ROW */
+.ledger-row{display:flex;align-items:flex-start;padding:11px 14px;border-bottom:1px solid var(--border);gap:11px;}
+.ledger-row:last-child{border-bottom:none;}
+.ledger-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px;}
+.ledger-info{flex:1;min-width:0;}
+.ledger-title{font-size:13px;font-weight:600;}
+.ledger-sub{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.5;}
+.ledger-right{text-align:right;flex-shrink:0;}
+.ledger-amt{font-size:14px;font-weight:800;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:700;}
+.badge-a{background:#dbeafe;color:#1d4ed8;} .badge-b{background:#fef3c7;color:#92400e;} .badge-both{background:var(--purple-bg);color:var(--purple);}
+
+/* PILLS */
+.pill-row{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;}
+.pill-row::-webkit-scrollbar{display:none;}
+.pill{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);white-space:nowrap;font-family:inherit;transition:all .15s;}
+.pill.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+/* FAB */
+.fab{position:fixed;bottom:22px;right:18px;z-index:90;width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,var(--primary3),var(--primary));color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(15,36,25,.35);display:flex;align-items:center;justify-content:center;}
+.fab:active{transform:scale(.93);}
+
+/* BUTTONS */
+.btn{padding:10px 16px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .15s;}
+.btn-primary{background:var(--primary);color:#fff;} .btn-primary:hover{background:var(--primary2);}
+.btn-accent{background:var(--accent);color:#fff;} .btn-accent:hover{opacity:.9;}
+.btn-ghost{background:var(--bg);color:var(--text);border:1.5px solid var(--border);} .btn-ghost:hover{background:var(--border);}
+.btn-danger{background:var(--red-bg);color:var(--red);}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px;}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:6px;}
+.btn-full{width:100%;justify-content:center;padding:13px;font-size:14px;border-radius:12px;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* FORM */
+.form-group{margin-bottom:13px;}
+.form-group label{font-size:11px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--surface2);color:var(--text);outline:none;transition:border .15s,box-shadow .15s;font-family:inherit;appearance:none;-webkit-appearance:none;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--primary3);box-shadow:0 0 0 3px rgba(45,97,71,.12);background:var(--surface);}
+.form-group select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-section{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 9px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+
+/* TOGGLE SWITCH */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.toggle-row label{font-size:13px;font-weight:600;color:var(--text);}
+.toggle-row .sub{font-size:11px;color:var(--text2);margin-top:1px;}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute;inset:0;background:var(--border);border-radius:12px;transition:.3s;cursor:pointer;}
+.slider:before{position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;}
+input:checked+.slider{background:var(--green);}
+input:checked+.slider:before{transform:translateX(20px);}
+
+/* PAYMENT MODE PILLS */
+.mode-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.mode-pill{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);font-family:inherit;transition:all .15s;}
+.mode-pill.active{border-color:var(--primary3);background:var(--green-bg);color:var(--green);}
+
+/* PARTIAL PAYMENT BAR */
+.partial-bar{background:var(--border);border-radius:4px;height:4px;margin-top:4px;overflow:hidden;}
+.partial-fill{height:100%;background:var(--blue);border-radius:4px;transition:width .3s;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:200;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:600px;max-height:93vh;overflow-y:auto;padding:6px 18px 38px;animation:slideUp .22s cubic-bezier(.25,.8,.25,1);}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 16px;}
+@keyframes slideUp{from{transform:translateY(50px);opacity:0;}to{transform:none;opacity:1;}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.modal-header h3{font-size:16px;font-weight:800;}
+.close-btn{background:var(--bg);border:none;width:30px;height:30px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);}
+
+/* HANDOVER HERO */
+.ho-hero{background:linear-gradient(135deg,var(--primary) 0%,var(--primary3) 100%);border-radius:var(--r);padding:18px;margin-bottom:12px;}
+.ho-label{color:rgba(255,255,255,.65);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.ho-amt{color:#fff;font-size:30px;font-weight:800;letter-spacing:-1px;}
+.ho-sub{color:rgba(255,255,255,.7);font-size:12px;margin-top:5px;}
+.ho-breakdown{display:flex;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15);}
+.ho-stat .hs-val{color:#fff;font-size:13px;font-weight:700;} .ho-stat .hs-lbl{color:rgba(255,255,255,.55);font-size:10px;margin-top:2px;}
+
+/* REPORT */
+.report-card{background:linear-gradient(135deg,#1e3a5f 0%,#2d6147 100%);border-radius:var(--r);padding:18px;margin-bottom:12px;color:#fff;}
+.report-title{font-size:16px;font-weight:800;margin-bottom:3px;} .report-sub{font-size:11px;opacity:.7;margin-bottom:14px;}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.report-stat{background:rgba(255,255,255,.1);border-radius:9px;padding:11px;}
+.report-stat .rv{font-size:17px;font-weight:800;} .report-stat .rl{font-size:10px;opacity:.7;margin-top:2px;font-weight:600;}
+.report-net{background:rgba(255,255,255,.15);border-radius:9px;padding:12px;margin-top:9px;display:flex;justify-content:space-between;align-items:center;}
+.rn-lbl{font-size:12px;font-weight:600;opacity:.8;} .rn-val{font-size:20px;font-weight:800;}
+
+/* SETUP UNIT */
+.setup-unit{display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);gap:10px;}
+.setup-unit:last-child{border-bottom:none;}
+.setup-unit-info{flex:1;} .setup-unit-name{font-size:13px;font-weight:700;} .setup-unit-meta{font-size:11px;color:var(--text2);margin-top:2px;}
+
+/* FIREBASE SETUP */
+/* firebase-setup CSS removed — using card style now */
+
+/* SEC HEAD */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sec-head h3{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;}
+
+/* ALERT */
+.alert{padding:9px 12px;border-radius:9px;font-size:12px;font-weight:500;margin-bottom:11px;}
+.alert-warn{background:var(--amber-bg);color:#78350f;border-left:3px solid var(--amber);}
+.alert-info{background:var(--blue-bg);color:#1e3a8a;border-left:3px solid var(--blue);}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 16px;}
+.e-icon{font-size:38px;margin-bottom:9px;} .e-title{font-size:13px;font-weight:700;color:var(--text2);} .e-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--primary);color:#fff;padding:9px 18px;border-radius:11px;font-size:12px;font-weight:600;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none;box-shadow:var(--shadow-lg);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(min-width:480px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
+@media print{.topbar,.nav-tabs,.fab,.no-print{display:none!important;}.section{display:block!important;}body{background:#fff;}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="topbar-brand">
+      <div class="topbar-icon"><span class="ic ic-lg"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></span></div>
+      <div>
+        <div class="topbar-title" id="appTitle">வாடகை கணக்கு</div>
+        <div class="topbar-sub" id="appSub">Rental Property Tracker</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="sync-dot" id="syncDot" title="Sync status"></div>
+      <button class="icon-btn" onclick="openReportModal()" aria-label="Report"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M20 18v3"/><path d="M16 16v5"/><path d="M12 13v8"/><path d="M8 16v5"/><path d="M3 12l5 -5l4 4l5 -5"/></svg></span></button>
+      <button class="icon-btn" onclick="toggleLang()" id="langBtn">EN</button>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="showTab('dashboard')" id="tab-dashboard"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></span> <span class="tab-label">Dashboard</span></button>
+    <button class="tab-btn" onclick="showTab('rent')" id="tab-rent"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9m0 1a1 1 0 0 1 1 -1h8a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1z"/><path d="M14 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M19 7v-1a1 1 0 0 0 -1 -1h-11a2 2 0 0 0 -2 2"/><path d="M5 9v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1 -1v-2"/></svg></span> <span class="tab-label">Rent</span></button>
+    <button class="tab-btn" onclick="showTab('expenses')" id="tab-expenses"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"/></svg></span> <span class="tab-label">Expenses</span></button>
+    <button class="tab-btn" onclick="showTab('handover')" id="tab-handover"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12l5 -5l3 3l-3.5 3.5"/><path d="M10.5 13.5l1.5 1.5"/><path d="M12 15l1.5 1.5"/><path d="M3 11l3 -3l3.5 3.5l-3 3z"/><path d="M21 11l-3 -3l-1 1"/><path d="M14.5 8.5l3 -3l3 3l-3 3"/></svg></span> <span class="tab-label">Handover</span></button>
+    <button class="tab-btn" onclick="showTab('setup')" id="tab-setup"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span> <span class="tab-label">Setup</span></button>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- Install App Banner -->
+<div class="install-banner no-print" id="installBanner">
+  <span class="ic ic-xl"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10a1 1 0 0 1 1 1v9a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1v-9a1 1 0 0 1 1 -1z"/><path d="M12 8v4"/><path d="M10 10l2 2l2 -2"/></svg></span>
+  <div class="ib-text">
+    <div class="ib-title">Install this app</div>
+    <div class="ib-sub">Add to your home screen for quick access</div>
+  </div>
+  <button onclick="triggerInstall()">Install</button>
+  <button class="ib-close" onclick="dismissInstallBanner()" aria-label="Dismiss"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div class="section active" id="sec-dashboard">
+  <div class="month-bar">
+    <button class="month-nav" onclick="changeMonth(-1)">&#8249;</button>
+    <div style="text-align:center">
+      <div class="month-label" id="dashMonthLabel"></div>
+      <div class="month-sub" id="dashMonthSub"></div>
+    </div>
+    <button class="month-nav" onclick="changeMonth(1)">&#8250;</button>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card s-green"><div class="s-icon"><span class="ic ic-xl"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9m0 1a1 1 0 0 1 1 -1h8a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1z"/><path d="M14 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M19 7v-1a1 1 0 0 0 -1 -1h-11a2 2 0 0 0 -2 2"/><path d="M5 9v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1 -1v-2"/></svg></span></div><div class="s-val" id="d-collected">₹0</div><div class="s-lbl" id="lbl-collected">Collected</div></div>
+    <div class="stat-card s-red"><div class="s-icon"><span class="ic ic-xl"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 3"/><path d="M21 12a9 9 0 1 1 -18 0a9 9 0 0 1 18 0z"/></svg></span></div><div class="s-val" id="d-pending">₹0</div><div class="s-lbl" id="lbl-pending">Pending</div></div>
+    <div class="stat-card s-amber"><div class="s-icon"><span class="ic ic-xl"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"/></svg></span></div><div class="s-val" id="d-expenses">₹0</div><div class="s-lbl" id="lbl-expenses">Expenses</div></div>
+    <div class="stat-card s-blue"><div class="s-icon"><span class="ic ic-xl"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12l5 -5l3 3l-3.5 3.5"/><path d="M10.5 13.5l1.5 1.5"/><path d="M12 15l1.5 1.5"/><path d="M3 11l3 -3l3.5 3.5l-3 3z"/><path d="M21 11l-3 -3l-1 1"/><path d="M14.5 8.5l3 -3l3 3l-3 3"/></svg></span></div><div class="s-val" id="d-handover">₹0</div><div class="s-lbl" id="lbl-handover">Handed Over</div></div>
+  </div>
+  <div id="dash-alert"></div>
+  <div class="sec-head"><h3 id="lbl-units-overview">Units Overview</h3></div>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left"><div class="card-head-icon" style="background:var(--blue-bg)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M9 8l1 0"/><path d="M9 12l1 0"/><path d="M9 16l1 0"/><path d="M14 8l1 0"/><path d="M14 12l1 0"/><path d="M14 16l1 0"/><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"/></svg></span></div><div><div style="font-size:14px;font-weight:700" id="dA-name">Property A</div><div class="card-sub" id="dA-addr"></div></div></div>
+      <span class="badge badge-a">A</span>
+    </div>
+    <div class="card-body" id="dA-units"></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left"><div class="card-head-icon" style="background:var(--amber-bg)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M9 8l1 0"/><path d="M9 12l1 0"/><path d="M9 16l1 0"/><path d="M14 8l1 0"/><path d="M14 12l1 0"/><path d="M14 16l1 0"/><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"/></svg></span></div><div><div style="font-size:14px;font-weight:700" id="dB-name">Property B</div><div class="card-sub" id="dB-addr"></div></div></div>
+      <span class="badge badge-b">B</span>
+    </div>
+    <div class="card-body" id="dB-units"></div>
+  </div>
+</div>
+
+<!-- ═══ RENT ═══ -->
+<div class="section" id="sec-rent">
+  <div class="month-bar">
+    <button class="month-nav" onclick="changeMonth(-1)">&#8249;</button>
+    <div style="text-align:center"><div class="month-label" id="rentMonthLabel"></div></div>
+    <button class="month-nav" onclick="changeMonth(1)">&#8250;</button>
+  </div>
+  <div class="pill-row" id="rentPropPills"></div>
+  <div id="rentAlertBox"></div>
+  <div class="card"><div class="card-body" id="rentList"></div></div>
+</div>
+
+<!-- ═══ EXPENSES ═══ -->
+<div class="section" id="sec-expenses">
+  <div class="month-bar">
+    <button class="month-nav" onclick="changeMonth(-1)">&#8249;</button>
+    <div style="text-align:center"><div class="month-label" id="expMonthLabel"></div></div>
+    <button class="month-nav" onclick="changeMonth(1)">&#8250;</button>
+  </div>
+  <div class="btn-row no-print" style="margin-bottom:12px;">
+    <button class="btn btn-accent btn-sm" onclick="openModal('addExpenseModal')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg></span> <span id="btn-addExpense">Add Expense</span></button>
+  </div>
+  <div class="pill-row">
+    <button class="pill active" onclick="filterExp('all',this)">All</button>
+    <button class="pill" onclick="filterExp('maintenance',this)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"/></svg></span> <span id="pill-maint">Maintenance</span></button>
+    <button class="pill" onclick="filterExp('property_tax',this)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M3 10l18 0"/><path d="M5 6l7 -3l7 3"/><path d="M4 10l0 11"/><path d="M20 10l0 11"/><path d="M8 14l0 3"/><path d="M12 14l0 3"/><path d="M16 14l0 3"/><path d="M5 10l14 0"/></svg></span> <span id="pill-ptax">Property Tax</span></button>
+    <button class="pill" onclick="filterExp('water_tax',this)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.502 19.423c2.602 1.243 5.518 1.238 7.998 -.01c2.location -1.255 3.84 -3.422 4.07 -5.852c.231 -2.43 -1.224 -5.654 -4.342 -9.674c-2.5 -3.21 -4.66 -3.21 -7.16 0c-3.118 4.02 -4.573 7.244 -4.342 9.674c.23 2.43 1.78 4.597 3.776 5.862z"/></svg></span> <span id="pill-wtax">Water Tax</span></button>
+    <button class="pill" onclick="filterExp('other',this)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/><path d="M12 12l8 -4.5"/><path d="M12 12l0 9"/><path d="M12 12l-8 -4.5"/></svg></span> <span id="pill-other">Other</span></button>
+  </div>
+  <div class="card"><div class="card-body" id="expenseList"></div></div>
+</div>
+
+<!-- ═══ HANDOVER ═══ -->
+<div class="section" id="sec-handover">
+  <div class="month-bar">
+    <button class="month-nav" onclick="changeMonth(-1)">&#8249;</button>
+    <div style="text-align:center"><div class="month-label" id="hoMonthLabel"></div></div>
+    <button class="month-nav" onclick="changeMonth(1)">&#8250;</button>
+  </div>
+  <div class="ho-hero">
+    <div class="ho-label" id="lbl-balance">Net Balance</div>
+    <div class="ho-amt" id="ho-balance">₹0</div>
+    <div class="ho-sub" id="ho-sub">Father should hand over this amount</div>
+    <div class="ho-breakdown">
+      <div class="ho-stat"><div class="hs-val" id="hob-collected">₹0</div><div class="hs-lbl" id="lbl-hob-c">Rent In</div></div>
+      <div class="ho-stat"><div class="hs-val" id="hob-exp">₹0</div><div class="hs-lbl" id="lbl-hob-e">Expenses</div></div>
+      <div class="ho-stat"><div class="hs-val" id="hob-paid">₹0</div><div class="hs-lbl" id="lbl-hob-p">Paid Out</div></div>
+    </div>
+  </div>
+  <div class="btn-row no-print" style="margin-bottom:12px;">
+    <button class="btn btn-primary btn-sm" onclick="openModal('addHandoverModal')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg></span> <span id="btn-addHandover">Record Handover</span></button>
+  </div>
+  <div class="sec-head"><h3 id="lbl-ho-history">Handover History</h3></div>
+  <div class="card"><div class="card-body" id="handoverList"></div></div>
+</div>
+
+<!-- ═══ SETUP ═══ -->
+<div class="section" id="sec-setup">
+
+  <!-- Firebase Status Card — fully automatic, no config needed -->
+  <div class="card" style="margin-bottom:12px;">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-head-icon" style="background:var(--teal-bg)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.55 3.464 3.464a3.464 3.464 0 0 1 -3.465 3.465h-11.878"/></svg></span></div>
+        <div>
+          <div style="font-size:14px;font-weight:700;">Cloud Sync</div>
+          <div class="card-sub" id="fbStatusText">Connecting...</div>
+        </div>
+      </div>
+      <div class="sync-dot" id="syncDot2"></div>
+    </div>
+  </div>
+
+  <div class="sec-head"><h3 id="lbl-properties">Properties &amp; Units</h3></div>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left"><div class="card-head-icon" style="background:var(--blue-bg)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M9 8l1 0"/><path d="M9 12l1 0"/><path d="M9 16l1 0"/><path d="M14 8l1 0"/><path d="M14 12l1 0"/><path d="M14 16l1 0"/><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"/></svg></span></div><div><div style="font-size:14px;font-weight:700" id="setupA-title">Property A</div><div class="card-sub" id="setupA-addr"></div></div></div>
+      <button class="btn btn-ghost btn-xs" onclick="openEditProp('A')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg></span> Edit</button>
+    </div>
+    <div class="card-body" id="setupUnitsA"></div>
+    <div class="card-pad no-print" style="padding-top:4px;"><button class="btn btn-ghost btn-sm" onclick="openAddUnit('A')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg></span> <span id="btn-addUnitA">Add Unit</span></button></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left"><div class="card-head-icon" style="background:var(--amber-bg)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M9 8l1 0"/><path d="M9 12l1 0"/><path d="M9 16l1 0"/><path d="M14 8l1 0"/><path d="M14 12l1 0"/><path d="M14 16l1 0"/><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"/></svg></span></div><div><div style="font-size:14px;font-weight:700" id="setupB-title">Property B</div><div class="card-sub" id="setupB-addr"></div></div></div>
+      <button class="btn btn-ghost btn-xs" onclick="openEditProp('B')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg></span> Edit</button>
+    </div>
+    <div class="card-body" id="setupUnitsB"></div>
+    <div class="card-pad no-print" style="padding-top:4px;"><button class="btn btn-ghost btn-sm" onclick="openAddUnit('B')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg></span> <span id="btn-addUnitB">Add Unit</span></button></div>
+  </div>
+
+  <div class="sec-head" style="margin-top:4px;"><h3 id="lbl-data">Data Management</h3></div>
+  <div class="card"><div class="card-pad">
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="exportData()"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 9l5 -5l5 5"/><path d="M12 4l0 12"/></svg></span> Export JSON</button>
+      <button class="btn btn-ghost btn-sm" onclick="importData()"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/></svg></span> Import JSON</button>
+      <button class="btn btn-danger btn-sm" onclick="clearAll()"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg></span> Clear All</button>
+    </div>
+  </div></div>
+</div>
+
+</div><!-- end .content -->
+<button class="fab no-print" onclick="fabAction()" aria-label="Add"><span class="ic ic-xl"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg></span></button>
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- RENT ENTRY MODAL -->
+<div class="modal-overlay" id="rentModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="rentModalTitle">Record Rent</h3>
+      <button class="close-btn" onclick="closeModal('rentModal')" aria-label="Close"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+    </div>
+    <input type="hidden" id="rentEditId"/>
+
+    <!-- Unit info display -->
+    <div id="rentUnitInfo" style="background:var(--teal-bg);border-radius:10px;padding:10px 13px;margin-bottom:14px;font-size:12px;color:var(--teal);font-weight:600;display:none;"></div>
+
+    <!-- Unit select (shown only when adding from FAB) -->
+    <div class="form-group" id="rentUnitSelectGroup">
+      <label id="lbl-unit">Unit</label>
+      <select id="rentUnitSel" onchange="onRentUnitChange()"></select>
+    </div>
+
+    <div class="form-section">Payment Details</div>
+
+    <!-- Amount rows -->
+    <div class="form-row">
+      <div class="form-group">
+        <label id="lbl-expectedAmt">Expected (₹)</label>
+        <input type="number" id="rentExpected" placeholder="5000" readonly style="background:var(--surface2);color:var(--text3);"/>
+      </div>
+      <div class="form-group">
+        <label id="lbl-paidAmt">Paid Amount (₹)</label>
+        <input type="number" id="rentPaid" placeholder="5000" oninput="onPaidAmtChange()"/>
+      </div>
+    </div>
+
+    <!-- Fully paid toggle -->
+    <div class="toggle-row">
+      <div>
+        <div style="font-size:13px;font-weight:600;" id="lbl-fullyPaid">Fully Paid</div>
+        <div class="sub" id="lbl-fullyPaidSub">Toggle if complete payment received</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="fullyPaidToggle" onchange="onFullyPaidToggle()"/><span class="slider"></span></label>
+    </div>
+
+    <!-- Balance due indicator -->
+    <div id="balanceDueBox" style="display:none;background:var(--amber-bg);border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--amber);font-weight:600;"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label id="lbl-paidDate">Paid Date</label>
+        <input type="date" id="rentPaidDate"/>
+      </div>
+      <div class="form-group">
+        <label id="lbl-status">Status</label>
+        <select id="rentStatus">
+          <option value="paid">✅ Paid</option>
+          <option value="partial">🔵 Partial</option>
+          <option value="pending">⏳ Pending</option>
+          <option value="overdue">❗ Overdue</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label id="lbl-payMode">Mode of Payment</label>
+      <div class="mode-pills">
+        <button type="button" class="mode-pill active" data-mode="cash" onclick="selectMode(this)">💵 Cash</button>
+        <button type="button" class="mode-pill" data-mode="upi" onclick="selectMode(this)">📱 UPI</button>
+        <button type="button" class="mode-pill" data-mode="bank" onclick="selectMode(this)">🏦 Bank</button>
+        <button type="button" class="mode-pill" data-mode="cheque" onclick="selectMode(this)">📄 Cheque</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label id="lbl-receivedBy">Received By</label>
+      <select id="rentReceivedBy">
+        <option value="father">👴 Father</option>
+        <option value="owner">🧑 Owner (Me)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label id="lbl-notes">Notes</label>
+      <input type="text" id="rentNotes" placeholder="Optional note"/>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="saveRent()" id="btn-saveRent">Save Payment</button>
+  </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="modal-overlay" id="addExpenseModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="modal-addExpense">Add Expense</h3>
+      <button class="close-btn" onclick="closeModal('addExpenseModal')" aria-label="Close"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label id="lbl-expType">Type</label>
+        <select id="expType">
+          <option value="maintenance">🔧 Maintenance</option>
+          <option value="property_tax">🏛️ Property Tax</option>
+          <option value="water_tax">💧 Water Tax</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label id="lbl-expProp">Property</label>
+        <select id="expProp">
+          <option value="A">Property A</option>
+          <option value="B">Property B</option>
+          <option value="both">Both</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label id="lbl-expAmt">Amount (₹)</label>
+        <input type="number" id="expAmount" placeholder="2000"/>
+      </div>
+      <div class="form-group">
+        <label id="lbl-expDate">Date</label>
+        <input type="date" id="expDate"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label id="lbl-expDesc">Description</label>
+      <input type="text" id="expDesc" placeholder="e.g. Plumbing repair Unit 3"/>
+    </div>
+    <div class="form-group">
+      <label id="lbl-paidBy">Paid By</label>
+      <select id="expPaidBy">
+        <option value="father">👴 Father</option>
+        <option value="owner">🧑 Owner (Me)</option>
+      </select>
+    </div>
+    <button class="btn btn-accent btn-full" onclick="saveExpense()" id="btn-saveExpense">Save Expense</button>
+  </div>
+</div>
+
+<!-- HANDOVER MODAL -->
+<div class="modal-overlay" id="addHandoverModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="modal-addHandover">Record Cash Handover</h3>
+      <button class="close-btn" onclick="closeModal('addHandoverModal')" aria-label="Close"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label id="lbl-hoAmt">Amount (₹)</label>
+        <input type="number" id="hoAmount" placeholder="25000"/>
+      </div>
+      <div class="form-group">
+        <label id="lbl-hoDate">Date</label>
+        <input type="date" id="hoDate"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label id="lbl-hoMode">Mode</label>
+      <select id="hoMode">
+        <option value="cash">💵 Cash</option>
+        <option value="upi">📱 UPI</option>
+        <option value="bank">🏦 Bank Transfer</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label id="lbl-hoNotes">Notes</label>
+      <input type="text" id="hoNotes" placeholder="e.g. After deducting plumbing"/>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveHandover()" id="btn-saveHandover">Record Handover</button>
+  </div>
+</div>
+
+<!-- UNIT MODAL -->
+<div class="modal-overlay" id="unitModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="unitModalTitle">Add Unit</h3>
+      <button class="close-btn" onclick="closeModal('unitModal')" aria-label="Close"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+    </div>
+    <input type="hidden" id="uProp" value="A"/>
+    <input type="hidden" id="uId" value=""/>
+    <div class="form-row">
+      <div class="form-group"><label id="lbl-unitName">Unit Name</label><input type="text" id="uName" placeholder="e.g. House 1A"/></div>
+      <div class="form-group"><label id="lbl-unitRent">Monthly Rent (₹)</label><input type="number" id="uRent" placeholder="5000"/></div>
+    </div>
+    <div class="form-group">
+      <label id="lbl-occupancy">Occupancy Status</label>
+      <select id="uOccupancy">
+        <option value="occupied">🏠 Occupied</option>
+        <option value="vacant">🏚️ Vacant / To-Let</option>
+      </select>
+    </div>
+    <div class="form-section" id="lbl-tenantDetails">Tenant Details</div>
+    <div class="form-row">
+      <div class="form-group"><label id="lbl-tenantName">Tenant Name</label><input type="text" id="uTenant" placeholder="e.g. Kumar"/></div>
+      <div class="form-group"><label id="lbl-tenantPhone">Phone</label><input type="tel" id="uPhone" placeholder="9876543210"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label id="lbl-deposit">Deposit (₹)</label><input type="number" id="uDeposit" placeholder="10000"/></div>
+      <div class="form-group"><label id="lbl-moveIn">Move-in Date</label><input type="date" id="uMoveIn"/></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveUnit()" id="btn-saveUnit">Save Unit</button>
+  </div>
+</div>
+
+<!-- EDIT PROPERTY MODAL -->
+<div class="modal-overlay" id="editPropModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="editPropTitle">Edit Property</h3>
+      <button class="close-btn" onclick="closeModal('editPropModal')" aria-label="Close"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+    </div>
+    <input type="hidden" id="editPropKey" value="A"/>
+    <div class="form-group"><label id="lbl-propName">Property Name</label><input type="text" id="editPropName" placeholder="e.g. Anna Nagar Building"/></div>
+    <div class="form-group"><label id="lbl-propAddr">Address</label><textarea id="editPropAddr" rows="2" placeholder="Full address"></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="saveProp()">Save Property</button>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="modal-report">Monthly Report</h3>
+      <button class="close-btn" onclick="closeModal('reportModal')" aria-label="Close"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+    </div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0"><label>Month</label><select id="reportMonth" onchange="generateReport()"></select></div>
+      <div class="form-group" style="margin-bottom:0"><label>Property</label>
+        <select id="reportProp" onchange="generateReport()">
+          <option value="all">All Properties</option>
+          <option value="A">Property A</option>
+          <option value="B">Property B</option>
+        </select>
+      </div>
+    </div>
+    <div id="reportContent"></div>
+    <div class="btn-row no-print" style="margin-top:14px;">
+      <button class="btn btn-primary btn-sm" onclick="window.print()"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2"/><path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4"/><path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z"/></svg></span> Print / PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  LOCAL STATE
+// ══════════════════════════════════════════
+
+// ── Inline icon constants for JS-rendered templates ──
+const ICON_USER="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0'/><path d='M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2'/></svg></span>";
+const ICON_PHONE="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2'/></svg></span>";
+const ICON_CHECK="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 12l2 2l4 -4'/><path d='M21 12a9 9 0 1 1 -18 0a9 9 0 0 1 18 0z'/></svg></span>";
+const ICON_DOT="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0'/><path d='M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0'/></svg></span>";
+const ICON_ALERT="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 9v4'/><path d='M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.535a1.914 1.914 0 0 0 -3.274 0z'/><path d='M12 16h.01'/></svg></span>";
+const ICON_CLOCK="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 7v5l3 3'/><path d='M21 12a9 9 0 1 1 -18 0a9 9 0 0 1 18 0z'/></svg></span>";
+const ICON_EDIT="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1'/><path d='M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z'/><path d='M16 5l3 3'/></svg></span>";
+const ICON_TRASH="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 7l16 0'/><path d='M10 11l0 6'/><path d='M14 11l0 6'/><path d='M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12'/><path d='M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3'/></svg></span>";
+const ICON_HOME="<span class='ic'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12l-2 0l9 -9l9 9l-2 0'/><path d='M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7'/><path d='M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6'/></svg></span>";
+const ICON_HOMEOFF="<span class='ic ic-xl'><svg viewBox='0 0 24 24' width='1em' height='1em' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 21v-9a1 1 0 0 0 -1 -1h-4a1 1 0 0 0 -1 1v9'/><path d='M5 12l-2 0l9 -9l9 9l-2 0'/><path d='M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7'/></svg></span>";
+
+const DB={get(k){try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
+const load=(k,d)=>DB.get(k)??d;
+const save=(k,v)=>DB.set(k,v);
+
+let lang=load('vk_lang','ta');
+let curMonth=load('vk_month',fmtMonth(new Date()));
+let expFilter='all',rentPropF='all',activeTab='dashboard';
+let selectedPayMode='cash';
+let editingRentUnitId=null; // when opening rent modal from pencil icon
+
+let properties=load('vk_props',{A:{name:'Property A',address:''},B:{name:'Property B',address:''}});
+let units=load('vk_units',[]);
+let rentRecords=load('vk_rents',[]);
+let expenses=load('vk_expenses',[]);
+let handovers=load('vk_handovers',[]);
+
+function persistLocal(){
+  save('vk_props',properties);save('vk_units',units);save('vk_rents',rentRecords);
+  save('vk_expenses',expenses);save('vk_handovers',handovers);
+  save('vk_lang',lang);save('vk_month',curMonth);
+}
+
+// ══════════════════════════════════════════
+//  FIREBASE
+// ══════════════════════════════════════════
+let db=null,fbListeners=[];
+
+// ── HARDCODED FIREBASE CONFIG ──
+// Baked directly into the app so no one needs to enter anything.
+// This is your actual project — both you and your father auto-connect on open.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBHNIN4-CgnWKAUEwO9nVnDk65OJdMjeEU",
+  authDomain: "rental-house-management-1e0ae.firebaseapp.com",
+  projectId: "rental-house-management-1e0ae",
+  storageBucket: "rental-house-management-1e0ae.firebasestorage.app",
+  messagingSenderId: "502124188719",
+  appId: "1:502124188719:web:7adee5096c5071b36922da"
+};
+
+function setSyncDot(state){
+  ['syncDot','syncDot2'].forEach(id=>{
+    const dot=document.getElementById(id);
+    if(!dot)return;
+    dot.className='sync-dot';
+    if(state==='online')dot.classList.add('online');
+    else if(state==='syncing')dot.classList.add('syncing');
+  });
+}
+
+async function initFirebase(config){
+  try{
+    const app=firebase.apps.length?firebase.app():firebase.initializeApp(config);
+    db=firebase.firestore();
+    db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+    setFbStatusText('Connecting...','');
+
+    // ── First-time safeguard: if cloud is empty but we have local data, push local → cloud ──
+    // This prevents local data from being silently wiped on first connect.
+    await seedCloudIfEmpty();
+
+    setFbStatusText('Connected — syncing live','online');
+    setSyncDot('online');
+    startListeners();
+  }catch(e){
+    setFbStatusText('Connection error — check internet','error');
+    setSyncDot('');
+    console.warn('Firebase init error:',e.message);
+  }
+}
+
+async function seedCloudIfEmpty(){
+  if(!db)return;
+  try{
+    // Properties
+    const propSnap=await db.collection('properties').get();
+    if(propSnap.empty && (units.length || properties.A.address || properties.B.address || properties.A.name!=='Property A' || properties.B.name!=='Property B')){
+      await db.collection('properties').doc('A').set(properties.A);
+      await db.collection('properties').doc('B').set(properties.B);
+    }
+    // Units
+    if(units.length){
+      const unitSnap=await db.collection('units').get();
+      if(unitSnap.empty){
+        for(const u of units){ await db.collection('units').doc(u.id).set(u); }
+      }
+    }
+    // Rent records
+    if(rentRecords.length){
+      const rrSnap=await db.collection('rentRecords').get();
+      if(rrSnap.empty){
+        for(const r of rentRecords){ await db.collection('rentRecords').doc(r.unitId+'_'+r.month).set(r); }
+      }
+    }
+    // Expenses
+    if(expenses.length){
+      const expSnap=await db.collection('expenses').get();
+      if(expSnap.empty){
+        for(const e of expenses){ await db.collection('expenses').doc(e.id).set(e); }
+      }
+    }
+    // Handovers
+    if(handovers.length){
+      const hoSnap=await db.collection('handovers').get();
+      if(hoSnap.empty){
+        for(const h of handovers){ await db.collection('handovers').doc(h.id).set(h); }
+      }
+    }
+  }catch(e){
+    console.warn('Seed error (non-fatal):',e.message);
+  }
+}
+
+function setFbStatusText(msg,state){
+  const el=document.getElementById('fbStatusText');
+  if(el){
+    el.textContent=msg;
+    el.style.color=state==='online'?'var(--green)':state==='error'?'var(--red)':'var(--text2)';
+  }
+}
+
+function startListeners(){
+  if(!db)return;
+
+  // properties is a special case — it's an object keyed by "A"/"B", not an array
+  const propUnsub=db.collection('properties').onSnapshot(snap=>{
+    const obj={A:{name:'Property A',address:''},B:{name:'Property B',address:''}};
+    snap.forEach(doc=>{ obj[doc.id]=doc.data(); });
+    properties=obj;
+    persistLocal();render();setSyncDot('online');
+  },err=>{console.warn('properties',err);setSyncDot('');});
+  fbListeners.push(propUnsub);
+
+  // array-based collections
+  const colls={
+    units:(d)=>{units=d;persistLocal();render();},
+    rentRecords:(d)=>{rentRecords=d;persistLocal();render();},
+    expenses:(d)=>{expenses=d;persistLocal();render();},
+    handovers:(d)=>{handovers=d;persistLocal();render();}
+  };
+  Object.entries(colls).forEach(([col,fn])=>{
+    const unsub=db.collection(col).onSnapshot(snap=>{
+      const arr=[];snap.forEach(doc=>arr.push({id:doc.id,...doc.data()}));
+      fn(arr);setSyncDot('online');
+    },err=>{console.warn(col,err);setSyncDot('');});
+    fbListeners.push(unsub);
+  });
+}
+
+async function fbSet(col,id,data){
+  if(!db)return;
+  setSyncDot('syncing');
+  try{await db.collection(col).doc(id).set(data,{merge:true});setSyncDot('online');}
+  catch(e){console.warn(e);setSyncDot('');}
+}
+async function fbDel(col,id){
+  if(!db)return;
+  try{await db.collection(col).doc(id).delete();setSyncDot('online');}
+  catch(e){console.warn(e);}
+}
+
+// Always auto-connect — config is baked into the app, zero setup needed
+setTimeout(()=>initFirebase(FIREBASE_CONFIG),400);
+
+// ══════════════════════════════════════════
+//  TRANSLATIONS
+// ══════════════════════════════════════════
+const T={
+  en:{appTitle:'Rental Tracker',appSub:'Property Management',
+    'tab-dashboard':'📋 Dashboard','tab-rent':'💰 Rent','tab-expenses':'🔧 Expenses','tab-handover':'🤝 Handover','tab-setup':'⚙️ Setup',
+    'lbl-collected':'Collected','lbl-pending':'Pending','lbl-expenses':'Expenses','lbl-handover':'Handed Over',
+    'lbl-units-overview':'Units Overview','lbl-properties':'Properties & Units','lbl-data':'Data Management',
+    'lbl-balance':'Net Balance','ho-sub':'Father should hand over this amount',
+    'lbl-hob-c':'Rent In','lbl-hob-e':'Expenses','lbl-hob-p':'Paid Out','lbl-ho-history':'Handover History',
+    'btn-addExpense':'Add Expense','btn-addHandover':'Record Handover','btn-addUnitA':'Add Unit','btn-addUnitB':'Add Unit',
+    'lbl-unit':'Unit','lbl-expectedAmt':'Expected (₹)','lbl-paidAmt':'Paid Amount (₹)',
+    'lbl-fullyPaid':'Fully Paid','lbl-fullyPaidSub':'Toggle if complete payment received',
+    'lbl-paidDate':'Paid Date','lbl-status':'Status','lbl-payMode':'Mode of Payment',
+    'lbl-receivedBy':'Received By','lbl-notes':'Notes',
+    'lbl-expType':'Type','lbl-expProp':'Property','lbl-expAmt':'Amount (₹)','lbl-expDate':'Date',
+    'lbl-expDesc':'Description','lbl-paidBy':'Paid By',
+    'lbl-hoAmt':'Amount (₹)','lbl-hoDate':'Date','lbl-hoMode':'Mode','lbl-hoNotes':'Notes',
+    'lbl-unitName':'Unit Name','lbl-unitRent':'Monthly Rent (₹)','lbl-occupancy':'Occupancy Status',
+    'lbl-tenantDetails':'Tenant Details','lbl-tenantName':'Tenant Name','lbl-tenantPhone':'Phone',
+    'lbl-deposit':'Deposit (₹)','lbl-moveIn':'Move-in Date','lbl-propName':'Property Name','lbl-propAddr':'Address',
+    'btn-saveRent':'Save Payment','btn-saveExpense':'Save Expense','btn-saveHandover':'Record Handover','btn-saveUnit':'Save Unit',
+    'modal-addExpense':'Add Expense','modal-addHandover':'Record Cash Handover','modal-report':'Monthly Report',
+    paid:'Paid',partial:'Partial',pending:'Pending',overdue:'Overdue',occupied:'Occupied',vacant:'Vacant',
+    cash:'Cash',upi:'UPI',bank:'Bank',cheque:'Cheque',father:'Father',owner:'Owner (Me)',
+    maintenance:'Maintenance',property_tax:'Property Tax',water_tax:'Water Tax',other:'Other',
+    langBtn:'த',
+    'empty-rent':'No units added. Go to Setup first.','empty-exp':'No expenses this month.',
+    'empty-ho':'No handovers this month.','no-units':'No units yet.',
+    'pill-maint':'Maintenance','pill-ptax':'Property Tax','pill-wtax':'Water Tax','pill-other':'Other'},
+  ta:{appTitle:'வாடகை கணக்கு',appSub:'சொத்து மேலாண்மை',
+    'tab-dashboard':'📋 சுருக்கம்','tab-rent':'💰 வாடகை','tab-expenses':'🔧 செலவு','tab-handover':'🤝 கையளிப்பு','tab-setup':'⚙️ அமைப்பு',
+    'lbl-collected':'வசூல்','lbl-pending':'நிலுவை','lbl-expenses':'செலவுகள்','lbl-handover':'கையளிக்கப்பட்டது',
+    'lbl-units-overview':'வீடுகள் நிலை','lbl-properties':'சொத்துக்கள் & வீடுகள்','lbl-data':'தரவு நிர்வாகம்',
+    'lbl-balance':'நிகர இருப்பு','ho-sub':'அப்பா இந்த தொகையை கொடுக்க வேண்டும்',
+    'lbl-hob-c':'வாடகை வரவு','lbl-hob-e':'செலவு','lbl-hob-p':'கையளித்தது','lbl-ho-history':'கையளிப்பு வரலாறு',
+    'btn-addExpense':'செலவு சேர்','btn-addHandover':'கையளிப்பு பதிவு','btn-addUnitA':'வீடு சேர்','btn-addUnitB':'வீடு சேர்',
+    'lbl-unit':'வீடு','lbl-expectedAmt':'எதிர்பார்த்த தொகை (₹)','lbl-paidAmt':'செலுத்திய தொகை (₹)',
+    'lbl-fullyPaid':'முழுமையாக செலுத்தியது','lbl-fullyPaidSub':'முழு தொகை வந்தால் இதை இயக்கவும்',
+    'lbl-paidDate':'செலுத்திய தேதி','lbl-status':'நிலை','lbl-payMode':'கட்டண முறை',
+    'lbl-receivedBy':'பெற்றவர்','lbl-notes':'குறிப்பு',
+    'lbl-expType':'வகை','lbl-expProp':'சொத்து','lbl-expAmt':'தொகை (₹)','lbl-expDate':'தேதி',
+    'lbl-expDesc':'விவரம்','lbl-paidBy':'செலுத்தியவர்',
+    'lbl-hoAmt':'தொகை (₹)','lbl-hoDate':'தேதி','lbl-hoMode':'முறை','lbl-hoNotes':'குறிப்பு',
+    'lbl-unitName':'வீட்டு பெயர்','lbl-unitRent':'மாத வாடகை (₹)','lbl-occupancy':'குடியிருப்பு நிலை',
+    'lbl-tenantDetails':'குடியிருப்பவர் விவரம்','lbl-tenantName':'பெயர்','lbl-tenantPhone':'தொலைபேசி',
+    'lbl-deposit':'முன்பணம் (₹)','lbl-moveIn':'குடி புகுந்த தேதி','lbl-propName':'சொத்து பெயர்','lbl-propAddr':'முகவரி',
+    'btn-saveRent':'சேமி','btn-saveExpense':'செலவு சேமி','btn-saveHandover':'கையளிப்பு பதிவு','btn-saveUnit':'வீடு சேமி',
+    'modal-addExpense':'செலவு சேர்','modal-addHandover':'பண கையளிப்பு','modal-report':'மாதாந்திர அறிக்கை',
+    paid:'செலுத்தியது',partial:'பகுதி',pending:'நிலுவை',overdue:'தாமதம்',occupied:'குடியிருக்கிறார்',vacant:'காலி',
+    cash:'ரொக்கம்',upi:'யூபிஐ',bank:'வங்கி',cheque:'காசோலை',father:'அப்பா',owner:'நான்',
+    maintenance:'பராமரிப்பு',property_tax:'சொத்து வரி',water_tax:'தண்ணீர் வரி',other:'மற்றவை',
+    langBtn:'EN',
+    'empty-rent':'வீடுகள் சேர்க்கப்படவில்லை. அமைப்பில் சேர்க்கவும்.','empty-exp':'இந்த மாதம் செலவுகள் இல்லை.',
+    'empty-ho':'இந்த மாதம் கையளிப்புகள் இல்லை.','no-units':'வீடுகள் இல்லை.',
+    'pill-maint':'பராமரிப்பு','pill-ptax':'சொத்து வரி','pill-wtax':'தண்ணீர் வரி','pill-other':'மற்றவை'}
+};
+const t=k=>T[lang][k]||T.en[k]||k;
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+function fmtMonth(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function parseMonth(m){const[y,mo]=m.split('-').map(Number);return new Date(y,mo-1,1);}
+function monthLabel(m){return parseMonth(m).toLocaleDateString(lang==='ta'?'ta-IN':'en-IN',{month:'long',year:'numeric'});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function fmt(n){return '₹'+Number(n||0).toLocaleString('en-IN');}
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function showToast(msg,dur=2500){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);}
+
+// ══════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════
+function showTab(tab){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  activeTab=tab;render();
+}
+function changeMonth(dir){const d=parseMonth(curMonth);d.setMonth(d.getMonth()+dir);curMonth=fmtMonth(d);save('vk_month',curMonth);render();}
+function toggleLang(){lang=lang==='ta'?'en':'ta';persistLocal();applyLang();render();}
+
+function applyLang(){
+  document.getElementById('appTitle').textContent=t('appTitle');
+  document.getElementById('appSub').textContent=t('appSub');
+  document.getElementById('langBtn').textContent=t('langBtn');
+  ['tab-dashboard','tab-rent','tab-expenses','tab-handover','tab-setup',
+   'lbl-collected','lbl-pending','lbl-expenses','lbl-handover','lbl-units-overview',
+   'lbl-properties','lbl-data','lbl-balance','ho-sub','lbl-hob-c','lbl-hob-e','lbl-hob-p','lbl-ho-history',
+   'btn-addExpense','btn-addHandover','btn-addUnitA','btn-addUnitB',
+   'lbl-unit','lbl-expectedAmt','lbl-paidAmt','lbl-fullyPaid','lbl-fullyPaidSub',
+   'lbl-paidDate','lbl-status','lbl-payMode','lbl-receivedBy','lbl-notes',
+   'lbl-expType','lbl-expProp','lbl-expAmt','lbl-expDate','lbl-expDesc','lbl-paidBy',
+   'lbl-hoAmt','lbl-hoDate','lbl-hoMode','lbl-hoNotes',
+   'lbl-unitName','lbl-unitRent','lbl-occupancy','lbl-tenantDetails','lbl-tenantName','lbl-tenantPhone',
+   'lbl-deposit','lbl-moveIn','lbl-propName','lbl-propAddr',
+   'btn-saveRent','btn-saveExpense','btn-saveHandover','btn-saveUnit',
+   'modal-addExpense','modal-addHandover','modal-report',
+   'pill-maint','pill-ptax','pill-wtax','pill-other'
+  ].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=t(id);});
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}));
+
+function fabAction(){
+  if(activeTab==='rent')openRentModal(null);
+  else if(activeTab==='expenses'){document.getElementById('expDate').value=todayStr();openModal('addExpenseModal');}
+  else if(activeTab==='handover'){document.getElementById('hoDate').value=todayStr();openModal('addHandoverModal');}
+  else showTab('setup');
+}
+
+// ══════════════════════════════════════════
+//  RENT MODAL — full logic
+// ══════════════════════════════════════════
+function openRentModal(unitId){
+  // unitId = specific unit (pencil click) or null (FAB — show select)
+  editingRentUnitId=unitId;
+  const hasSel=unitId===null;
+  document.getElementById('rentUnitSelectGroup').style.display=hasSel?'block':'none';
+  document.getElementById('rentEditId').value='';
+
+  if(hasSel){
+    // Populate unit select
+    const opts=units.filter(u=>rentPropF==='all'||u.prop===rentPropF);
+    const all=opts.length?opts:units;
+    document.getElementById('rentUnitSel').innerHTML=all.map(u=>
+      `<option value="${u.id}">[${u.prop}] ${u.name}${u.tenant?' — '+u.tenant:''}</option>`
+    ).join('');
+    if(all.length)populateRentModalForUnit(all[0].id);
+  } else {
+    populateRentModalForUnit(unitId);
+  }
+
+  // Reset mode pills
+  selectModeByVal('cash');
+  document.getElementById('rentReceivedBy').value='father';
+  document.getElementById('rentNotes').value='';
+  document.getElementById('rentPaidDate').value=todayStr();
+  document.getElementById('rentModalTitle').textContent=unitId?
+    (units.find(u=>u.id===unitId)?.name||'Rent'):(lang==='ta'?'வாடகை பதிவு':'Record Rent');
+  openModal('rentModal');
+}
+
+function populateRentModalForUnit(unitId){
+  const u=units.find(x=>x.id===unitId);if(!u)return;
+  const rec=rentRecords.find(r=>r.unitId===unitId&&r.month===curMonth);
+
+  // Show tenant info
+  const infoEl=document.getElementById('rentUnitInfo');
+  if(u.tenant){
+    infoEl.style.display='block';
+    infoEl.innerHTML=`${ICON_USER} ${u.tenant}${u.phone?' &middot; '+ICON_PHONE+' '+u.phone:''}${u.deposit?' &middot; Dep: '+fmt(u.deposit):''}`;
+  } else infoEl.style.display='none';
+
+  document.getElementById('rentExpected').value=u.rent||0;
+
+  if(rec){
+    // Pre-fill with existing record
+    document.getElementById('rentEditId').value=rec.id;
+    document.getElementById('rentPaid').value=rec.paidAmount||rec.amount||0;
+    document.getElementById('rentStatus').value=rec.status;
+    document.getElementById('rentPaidDate').value=rec.paidDate||rec.date||todayStr();
+    document.getElementById('rentReceivedBy').value=rec.receivedBy||'father';
+    document.getElementById('rentNotes').value=rec.notes||'';
+    selectModeByVal(rec.payMode||'cash');
+    const fullyPaid=rec.status==='paid'&&(rec.paidAmount>=u.rent);
+    document.getElementById('fullyPaidToggle').checked=fullyPaid;
+  } else {
+    document.getElementById('rentPaid').value=u.rent||0;
+    document.getElementById('rentStatus').value='paid';
+    document.getElementById('fullyPaidToggle').checked=true;
+    selectModeByVal('cash');
+  }
+  updateBalanceDue();
+}
+
+function onRentUnitChange(){
+  const id=document.getElementById('rentUnitSel').value;
+  populateRentModalForUnit(id);
+}
+
+function onPaidAmtChange(){
+  const expected=parseFloat(document.getElementById('rentExpected').value)||0;
+  const paid=parseFloat(document.getElementById('rentPaid').value)||0;
+  const toggle=document.getElementById('fullyPaidToggle');
+  toggle.checked=(paid>=expected&&expected>0);
+  if(!toggle.checked&&paid>0)document.getElementById('rentStatus').value='partial';
+  else if(toggle.checked)document.getElementById('rentStatus').value='paid';
+  updateBalanceDue();
+}
+
+function onFullyPaidToggle(){
+  const checked=document.getElementById('fullyPaidToggle').checked;
+  if(checked){
+    const expected=parseFloat(document.getElementById('rentExpected').value)||0;
+    document.getElementById('rentPaid').value=expected;
+    document.getElementById('rentStatus').value='paid';
+  } else {
+    document.getElementById('rentStatus').value='partial';
+  }
+  updateBalanceDue();
+}
+
+function updateBalanceDue(){
+  const expected=parseFloat(document.getElementById('rentExpected').value)||0;
+  const paid=parseFloat(document.getElementById('rentPaid').value)||0;
+  const bal=expected-paid;
+  const box=document.getElementById('balanceDueBox');
+  if(bal>0&&paid>0){
+    box.style.display='block';
+    box.textContent=`⚠️ Balance due: ${fmt(bal)} (${Math.round(paid/expected*100)}% paid)`;
+  } else box.style.display='none';
+}
+
+function selectMode(btn){
+  document.querySelectorAll('.mode-pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  selectedPayMode=btn.dataset.mode;
+}
+function selectModeByVal(val){
+  document.querySelectorAll('.mode-pill').forEach(p=>{
+    p.classList.toggle('active',p.dataset.mode===val);
+  });
+  selectedPayMode=val;
+}
+
+function saveRent(){
+  const unitId=editingRentUnitId||document.getElementById('rentUnitSel').value;
+  if(!unitId)return showToast('Select a unit');
+  const u=units.find(x=>x.id===unitId);
+  const paidAmount=parseFloat(document.getElementById('rentPaid').value)||0;
+  const status=document.getElementById('rentStatus').value;
+  const paidDate=document.getElementById('rentPaidDate').value;
+  const receivedBy=document.getElementById('rentReceivedBy').value;
+  const notes=document.getElementById('rentNotes').value.trim();
+  if(!paidAmount&&status!=='pending'&&status!=='overdue')return showToast('Enter paid amount');
+
+  // Remove old record for this unit+month
+  rentRecords=rentRecords.filter(r=>!(r.unitId===unitId&&r.month===curMonth));
+  const rec={id:uid(),unitId,month:curMonth,
+    amount:paidAmount,paidAmount,
+    expectedAmount:u?u.rent:paidAmount,
+    date:paidDate,paidDate,status,
+    payMode:selectedPayMode,receivedBy,notes};
+  rentRecords.push(rec);
+
+  // Firebase sync
+  if(db){
+    // delete old, set new — use unitId+month as doc key for easy overwrite
+    const docId=unitId+'_'+curMonth;
+    fbSet('rentRecords',docId,rec);
+    // clean old docs (in case id changed)
+  }
+
+  persistLocal();closeModal('rentModal');render();
+  showToast(lang==='ta'?'வாடகை சேமிக்கப்பட்டது!':'Rent saved!');
+}
+
+// ══════════════════════════════════════════
+//  EXPENSES
+// ══════════════════════════════════════════
+function saveExpense(){
+  const amount=parseFloat(document.getElementById('expAmount').value)||0;
+  if(!amount)return showToast('Enter amount');
+  const e={id:uid(),type:document.getElementById('expType').value,
+    prop:document.getElementById('expProp').value,amount,
+    date:document.getElementById('expDate').value,
+    desc:document.getElementById('expDesc').value.trim(),
+    paidBy:document.getElementById('expPaidBy').value,month:curMonth};
+  expenses.push(e);
+  if(db)fbSet('expenses',e.id,e);
+  persistLocal();closeModal('addExpenseModal');render();
+  document.getElementById('expAmount').value='';document.getElementById('expDesc').value='';
+  showToast(lang==='ta'?'செலவு சேமிக்கப்பட்டது!':'Expense saved!');
+}
+function deleteExpense(id){
+  if(!confirm('Delete?'))return;
+  expenses=expenses.filter(e=>e.id!==id);
+  if(db)fbDel('expenses',id);
+  persistLocal();render();
+}
+function filterExp(f,btn){expFilter=f;document.querySelectorAll('#sec-expenses .pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active');renderExpenses();}
+
+// ══════════════════════════════════════════
+//  HANDOVERS
+// ══════════════════════════════════════════
+function saveHandover(){
+  const amount=parseFloat(document.getElementById('hoAmount').value)||0;
+  if(!amount)return showToast('Enter amount');
+  const h={id:uid(),month:curMonth,amount,date:document.getElementById('hoDate').value,
+    mode:document.getElementById('hoMode').value,notes:document.getElementById('hoNotes').value.trim()};
+  handovers.push(h);
+  if(db)fbSet('handovers',h.id,h);
+  persistLocal();closeModal('addHandoverModal');render();
+  document.getElementById('hoAmount').value='';document.getElementById('hoNotes').value='';
+  showToast(lang==='ta'?'கையளிப்பு பதிவு!':'Handover recorded!');
+}
+function deleteHandover(id){
+  if(!confirm('Delete?'))return;
+  handovers=handovers.filter(h=>h.id!==id);
+  if(db)fbDel('handovers',id);
+  persistLocal();render();
+}
+
+// ══════════════════════════════════════════
+//  SETUP — PROPERTY
+// ══════════════════════════════════════════
+function openEditProp(p){
+  document.getElementById('editPropKey').value=p;
+  document.getElementById('editPropTitle').textContent='Edit: '+properties[p].name;
+  document.getElementById('editPropName').value=properties[p].name;
+  document.getElementById('editPropAddr').value=properties[p].address||'';
+  openModal('editPropModal');
+}
+function saveProp(){
+  const p=document.getElementById('editPropKey').value;
+  properties[p]={name:document.getElementById('editPropName').value.trim()||'Property '+p,
+    address:document.getElementById('editPropAddr').value.trim()};
+  if(db)fbSet('properties',p,properties[p]);
+  persistLocal();closeModal('editPropModal');render();showToast('Saved!');
+}
+
+// ══════════════════════════════════════════
+//  SETUP — UNITS
+// ══════════════════════════════════════════
+function openAddUnit(p){
+  document.getElementById('uId').value='';document.getElementById('uProp').value=p;
+  document.getElementById('unitModalTitle').textContent=(lang==='ta'?'வீடு சேர்':'Add Unit')+' — '+properties[p].name;
+  ['uName','uTenant','uPhone'].forEach(id=>document.getElementById(id).value='');
+  ['uRent','uDeposit'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('uOccupancy').value='occupied';document.getElementById('uMoveIn').value='';
+  openModal('unitModal');
+}
+function editUnit(id){
+  const u=units.find(x=>x.id===id);if(!u)return;
+  document.getElementById('uId').value=u.id;document.getElementById('uProp').value=u.prop;
+  document.getElementById('unitModalTitle').textContent=(lang==='ta'?'திருத்து':'Edit')+': '+u.name;
+  document.getElementById('uName').value=u.name;document.getElementById('uRent').value=u.rent;
+  document.getElementById('uOccupancy').value=u.occupancy||'occupied';
+  document.getElementById('uTenant').value=u.tenant||'';document.getElementById('uPhone').value=u.phone||'';
+  document.getElementById('uDeposit').value=u.deposit||'';document.getElementById('uMoveIn').value=u.moveIn||'';
+  openModal('unitModal');
+}
+function deleteUnit(id){
+  if(!confirm('Delete unit?'))return;
+  units=units.filter(u=>u.id!==id);
+  if(db)fbDel('units',id);
+  persistLocal();render();
+}
+function saveUnit(){
+  const id=document.getElementById('uId').value,prop=document.getElementById('uProp').value;
+  const name=document.getElementById('uName').value.trim();
+  if(!name)return showToast('Enter unit name');
+  const data={prop,name,rent:parseFloat(document.getElementById('uRent').value)||0,
+    occupancy:document.getElementById('uOccupancy').value,
+    tenant:document.getElementById('uTenant').value.trim(),
+    phone:document.getElementById('uPhone').value.trim(),
+    deposit:parseFloat(document.getElementById('uDeposit').value)||0,
+    moveIn:document.getElementById('uMoveIn').value};
+  if(id){const u=units.find(x=>x.id===id);if(u)Object.assign(u,data);if(db)fbSet('units',id,{id,...data});}
+  else{const nu={id:uid(),...data};units.push(nu);if(db)fbSet('units',nu.id,nu);}
+  persistLocal();closeModal('unitModal');render();showToast(lang==='ta'?'சேமிக்கப்பட்டது!':'Saved!');
+}
+
+// ══════════════════════════════════════════
+//  COMPUTED
+// ══════════════════════════════════════════
+function mCollected(m,prop='all'){
+  return rentRecords.filter(r=>{const u=units.find(x=>x.id===r.unitId);return r.month===m&&(prop==='all'||u?.prop===prop);})
+    .reduce((s,r)=>s+(r.paidAmount||r.amount||0),0);
+}
+function mPending(m,prop='all'){
+  return units.filter(u=>prop==='all'||u.prop===prop).reduce((s,u)=>{
+    const r=rentRecords.find(x=>x.unitId===u.id&&x.month===m);
+    const paid=r?(r.paidAmount||r.amount||0):0;
+    return s+Math.max(0,(u.rent||0)-paid);
+  },0);
+}
+function mExpenses(m,prop='all'){return expenses.filter(e=>e.month===m&&(prop==='all'||e.prop===prop||e.prop==='both')).reduce((s,e)=>s+e.amount,0);}
+function mHandovers(m){return handovers.filter(h=>h.month===m).reduce((s,h)=>s+h.amount,0);}
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+function render(){
+  try{renderMonthLabels();}catch(e){console.warn('renderMonthLabels',e);}
+  try{renderDashboard();}catch(e){console.warn('renderDashboard',e);}
+  try{renderRent();}catch(e){console.warn('renderRent',e);}
+  try{renderExpenses();}catch(e){console.warn('renderExpenses',e);}
+  try{renderHandover();}catch(e){console.warn('renderHandover',e);}
+  try{renderSetup();}catch(e){console.warn('renderSetup',e);}
+}
+
+function renderMonthLabels(){
+  const lbl=monthLabel(curMonth);
+  ['dashMonthLabel','rentMonthLabel','expMonthLabel','hoMonthLabel'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=lbl;});
+  const sub=document.getElementById('dashMonthSub');
+  if(sub)sub.textContent=`${units.filter(u=>u.occupancy==='occupied').length} ${t('occupied')} · ${units.filter(u=>u.occupancy==='vacant').length} ${t('vacant')}`;
+}
+
+function unitRentRow(u,forDash){
+  const occ=u.occupancy||'occupied';
+  if(occ==='vacant'){
+    return `<div class="unit-row">
+      <div class="unit-avatar" style="background:var(--purple-bg)"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-9a1 1 0 0 0 -1 -1h-4a1 1 0 0 0 -1 1v9"/><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/></svg></span></div>
+      <div class="unit-info">
+        <div class="unit-name">${u.name} <span class="badge badge-${u.prop.toLowerCase()}">${u.prop}</span></div>
+        <div class="unit-meta">${t('vacant')} · ${fmt(u.rent)}/mo</div>
+      </div>
+      <div class="unit-actions"><span class="unit-status-tag tag-vacant">${t('vacant')}</span></div>
+    </div>`;
+  }
+  const rec=rentRecords.find(r=>r.unitId===u.id&&r.month===curMonth);
+  const status=rec?rec.status:'pending';
+  const paidAmt=rec?(rec.paidAmount||rec.amount||0):0;
+  const expected=u.rent||0;
+  const pct=expected>0?Math.min(100,Math.round(paidAmt/expected*100)):0;
+  const tagClass=status==='paid'?'tag-paid':status==='partial'?'tag-partial':status==='overdue'?'tag-overdue':'tag-pending';
+  const bg=status==='paid'?'var(--green-bg)':status==='partial'?'var(--blue-bg)':status==='overdue'?'var(--red-bg)':'var(--amber-bg)';
+  const col=status==='paid'?'var(--green)':status==='partial'?'var(--blue)':status==='overdue'?'var(--red)':'var(--amber)';
+  const icon=status==='paid'?ICON_CHECK:status==='partial'?ICON_DOT:status==='overdue'?ICON_ALERT:ICON_CLOCK;
+  const modeTag=rec&&rec.payMode?`<span style="font-size:10px;background:var(--surface2);border-radius:4px;padding:1px 5px;">${t(rec.payMode)}</span>`:'';
+  const rcvTag=rec&&rec.receivedBy?`<span style="font-size:10px;color:var(--text3);">${t(rec.receivedBy)}</span>`:'';
+  const pencilBtn=forDash?'':`<button class="edit-rent-btn" onclick="openRentModal('${u.id}')" title="Edit rent">${ICON_EDIT}</button>`;
+
+  return `<div class="unit-row">
+    <div class="unit-avatar" style="background:${bg}">${icon}</div>
+    <div class="unit-info">
+      <div class="unit-name">${u.name} <span class="badge badge-${u.prop.toLowerCase()}">${u.prop}</span></div>
+      <div class="unit-meta">${ICON_USER} ${u.tenant||'—'}${u.phone?' &middot; '+ICON_PHONE+' '+u.phone:''}</div>
+      ${!forDash&&rec?`<div class="unit-meta">${modeTag} ${rcvTag}${rec.paidDate?' · '+rec.paidDate:''}</div>`:''}
+      ${status==='partial'?`<div class="partial-bar" style="margin-top:5px;"><div class="partial-fill" style="width:${pct}%"></div></div>`:''}
+      ${rec&&rec.notes?`<div class="unit-meta" style="color:var(--text3)">💬 ${rec.notes}</div>`:''}
+    </div>
+    <div class="unit-actions">
+      <div class="unit-amt" style="color:${col}">${fmt(paidAmt)}</div>
+      <span class="unit-status-tag ${tagClass}">${t(status)}${status==='partial'?' '+pct+'%':''}</span>
+      ${pencilBtn}
+    </div>
+  </div>`;
+}
+
+function renderDashboard(){
+  document.getElementById('d-collected').textContent=fmt(mCollected(curMonth));
+  document.getElementById('d-pending').textContent=fmt(mPending(curMonth));
+  document.getElementById('d-expenses').textContent=fmt(mExpenses(curMonth));
+  document.getElementById('d-handover').textContent=fmt(mHandovers(curMonth));
+  const overdue=units.filter(u=>{const r=rentRecords.find(x=>x.unitId===u.id&&x.month===curMonth);return r&&r.status==='overdue';});
+  document.getElementById('dash-alert').innerHTML=overdue.length?`<div class="alert alert-warn">⚠️ ${overdue.length} unit(s) overdue: ${overdue.map(u=>u.name).join(', ')}</div>`:'';
+  ['A','B'].forEach(p=>{
+    document.getElementById(`d${p}-name`).textContent=properties[p].name;
+    document.getElementById(`d${p}-addr`).textContent=properties[p].address||'';
+    const pUnits=units.filter(u=>u.prop===p);
+    const c=document.getElementById(`d${p}-units`);
+    if(!pUnits.length){c.innerHTML=`<div class="empty"><div class="e-icon">${ICON_HOMEOFF}</div><div class="e-title">${t('no-units')}</div></div>`;return;}
+    c.innerHTML=pUnits.map(u=>unitRentRow(u,true)).join('');
+  });
+}
+
+function renderRent(){
+  const pillsEl=document.getElementById('rentPropPills');
+  pillsEl.innerHTML=`<button class="pill ${rentPropF==='all'?'active':''}" onclick="setRentProp('all',this)">All</button>
+    <button class="pill ${rentPropF==='A'?'active':''}" onclick="setRentProp('A',this)">${properties.A.name}</button>
+    <button class="pill ${rentPropF==='B'?'active':''}" onclick="setRentProp('B',this)">${properties.B.name}</button>
+    <button class="pill no-print" onclick="openRentModal(null)" style="background:var(--primary);color:#fff;border-color:var(--primary);">+ ${lang==='ta'?'வாடகை பதிவு':'Add Rent'}</button>`;
+  const filtered=units.filter(u=>rentPropF==='all'||u.prop===rentPropF);
+  const listEl=document.getElementById('rentList');
+  const alertEl=document.getElementById('rentAlertBox');
+  if(!filtered.length){listEl.innerHTML=`<div class="empty"><div class="e-icon">${ICON_HOME}</div><div class="e-title">${t('empty-rent')}</div></div>`;alertEl.innerHTML='';return;}
+  const paid=filtered.filter(u=>{const r=rentRecords.find(x=>x.unitId===u.id&&x.month===curMonth);return r&&r.status==='paid';}).length;
+  const partial=filtered.filter(u=>{const r=rentRecords.find(x=>x.unitId===u.id&&x.month===curMonth);return r&&r.status==='partial';}).length;
+  alertEl.innerHTML=`<div class="alert alert-info">📊 ${paid} fully paid · ${partial} partial · ${filtered.length-paid-partial} pending</div>`;
+  listEl.innerHTML=filtered.map(u=>unitRentRow(u,false)).join('');
+}
+function setRentProp(f,btn){rentPropF=f;document.querySelectorAll('#rentPropPills .pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active');renderRent();}
+
+function renderExpenses(){
+  const monthExp=expenses.filter(e=>e.month===curMonth);
+  const filtered=expFilter==='all'?monthExp:monthExp.filter(e=>e.type===expFilter);
+  const listEl=document.getElementById('expenseList');
+  if(!filtered.length){listEl.innerHTML=`<div class="empty"><div class="e-icon">📋</div><div class="e-title">${t('empty-exp')}</div></div>`;return;}
+  const icons={maintenance:'🔧',property_tax:'🏛️',water_tax:'💧',other:'📦'};
+  const bgs={maintenance:'var(--amber-bg)',property_tax:'var(--blue-bg)',water_tax:'var(--teal-bg)',other:'var(--red-bg)'};
+  const cols={maintenance:'var(--amber)',property_tax:'var(--blue)',water_tax:'var(--teal)',other:'var(--red)'};
+  listEl.innerHTML=filtered.sort((a,b)=>b.date.localeCompare(a.date)).map(e=>`
+    <div class="ledger-row">
+      <div class="ledger-icon" style="background:${bgs[e.type]||'var(--surface2)'}">${icons[e.type]||'📦'}</div>
+      <div class="ledger-info">
+        <div class="ledger-title">${t(e.type)} <span class="badge badge-${e.prop==='both'?'both':e.prop.toLowerCase()}">${e.prop==='both'?'Both':e.prop}</span></div>
+        <div class="ledger-sub">${e.desc||'—'} · ${t(e.paidBy)} · ${e.date}</div>
+      </div>
+      <div class="ledger-right">
+        <div class="ledger-amt" style="color:${cols[e.type]||'var(--red)'}">${fmt(e.amount)}</div>
+        <button class="btn btn-danger btn-xs no-print" style="margin-top:4px;" onclick="deleteExpense('${e.id}')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+      </div>
+    </div>`).join('');
+}
+
+function renderHandover(){
+  const collected=mCollected(curMonth),exp=mExpenses(curMonth),ho=mHandovers(curMonth);
+  const bal=Math.max(0,collected-exp-ho);
+  document.getElementById('ho-balance').textContent=fmt(bal);
+  document.getElementById('hob-collected').textContent=fmt(collected);
+  document.getElementById('hob-exp').textContent=fmt(exp);
+  document.getElementById('hob-paid').textContent=fmt(ho);
+  document.getElementById('ho-sub').textContent=t('ho-sub');
+  const monthHo=handovers.filter(h=>h.month===curMonth).sort((a,b)=>b.date.localeCompare(a.date));
+  const listEl=document.getElementById('handoverList');
+  if(!monthHo.length){listEl.innerHTML=`<div class="empty"><div class="e-icon">🤝</div><div class="e-title">${t('empty-ho')}</div></div>`;return;}
+  listEl.innerHTML=monthHo.map(h=>`
+    <div class="ledger-row">
+      <div class="ledger-icon" style="background:var(--green-bg)">🤝</div>
+      <div class="ledger-info">
+        <div class="ledger-title">Cash Handover</div>
+        <div class="ledger-sub">${t(h.mode||'cash')}${h.notes?' · '+h.notes:''} · ${h.date}</div>
+      </div>
+      <div class="ledger-right">
+        <div class="ledger-amt" style="color:var(--green)">${fmt(h.amount)}</div>
+        <button class="btn btn-danger btn-xs no-print" style="margin-top:4px;" onclick="deleteHandover('${h.id}')"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg></span></button>
+      </div>
+    </div>`).join('');
+}
+
+function renderSetup(){
+  ['A','B'].forEach(p=>{
+    document.getElementById(`setup${p}-title`).textContent=properties[p].name;
+    document.getElementById(`setup${p}-addr`).textContent=properties[p].address||'';
+    const pUnits=units.filter(u=>u.prop===p);
+    const c=document.getElementById(`setupUnits${p}`);
+    if(!pUnits.length){c.innerHTML=`<div style="padding:11px 14px;font-size:12px;color:var(--text3);">${t('no-units')}</div>`;return;}
+    c.innerHTML=pUnits.map(u=>{
+      const occ=u.occupancy||'occupied';
+      const occTag=occ==='occupied'?`<span class="unit-status-tag tag-occupied" style="margin-left:6px">${t('occupied')}</span>`:`<span class="unit-status-tag tag-vacant" style="margin-left:6px">${t('vacant')}</span>`;
+      return`<div class="setup-unit"><div class="ic ic-lg" style="color:var(--text2)">${occ==='occupied'?ICON_HOME:ICON_HOMEOFF}</div>
+        <div class="setup-unit-info">
+          <div class="setup-unit-name">${u.name}${occTag}</div>
+          <div class="setup-unit-meta">${u.tenant||'—'}${u.phone?' &middot; '+ICON_PHONE+' '+u.phone:''} &middot; ${fmt(u.rent)}/mo${u.deposit?' &middot; Dep:'+fmt(u.deposit):''}</div>
+        </div>
+        <div class="btn-row no-print" style="margin:0;gap:4px;flex-shrink:0;">
+          <button class="btn btn-ghost btn-xs" onclick="editUnit('${u.id}')">${ICON_EDIT}</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteUnit('${u.id}')">${ICON_TRASH}</button>
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+// ══════════════════════════════════════════
+//  REPORT
+// ══════════════════════════════════════════
+function openReportModal(){
+  const allMonths=new Set([...rentRecords.map(r=>r.month),...expenses.map(e=>e.month),...handovers.map(h=>h.month),curMonth]);
+  const sorted=[...allMonths].sort().reverse();
+  const sel=document.getElementById('reportMonth');
+  sel.innerHTML=sorted.map(m=>`<option value="${m}" ${m===curMonth?'selected':''}>${monthLabel(m)}</option>`).join('');
+  openModal('reportModal');generateReport();
+}
+function generateReport(){
+  const m=document.getElementById('reportMonth').value;
+  const prop=document.getElementById('reportProp').value;
+  const propLabel=prop==='all'?'All Properties':properties[prop]?.name||prop;
+  const collected=mCollected(m,prop),pending=mPending(m,prop),exp=mExpenses(m,prop),ho=mHandovers(m);
+  const bal=Math.max(0,collected-exp-ho);
+  const th='padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);background:var(--surface2);';
+
+  const unitRows=units.filter(u=>prop==='all'||u.prop===prop).map(u=>{
+    const rec=rentRecords.find(r=>r.unitId===u.id&&r.month===m);
+    const occ=u.occupancy||'occupied';
+    const status=occ==='vacant'?'vacant':rec?rec.status:'pending';
+    const paidAmt=rec?(rec.paidAmount||rec.amount||0):0;
+    const expected=u.rent||0;
+    const pct=expected>0?Math.round(paidAmt/expected*100):0;
+    const tagClass=status==='paid'?'tag-paid':status==='partial'?'tag-partial':status==='overdue'?'tag-overdue':status==='vacant'?'tag-vacant':'tag-pending';
+    const modeStr=rec&&rec.payMode?` (${t(rec.payMode)})`:'' ;
+    const rcvStr=rec&&rec.receivedBy?t(rec.receivedBy):'';
+    return`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 12px;font-size:12px;font-weight:600">${u.name}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--text2)">${u.tenant||'—'}${u.phone?'<br>'+ICON_PHONE+' '+u.phone:''}</td>
+      <td style="padding:8px 12px;font-size:12px"><span style="font-weight:700">${fmt(paidAmt)}</span><br><span style="font-size:10px;color:var(--text3)">of ${fmt(expected)}${status==='partial'?' ('+pct+'%)':''}</span></td>
+      <td style="padding:8px 12px"><span class="unit-status-tag ${tagClass}">${t(status)}${modeStr}</span>${rcvStr?'<br><span style="font-size:10px;color:var(--text3)">'+rcvStr+'</span>':''}</td>
+    </tr>`;
+  }).join('');
+
+  const expRows=expenses.filter(e=>e.month===m&&(prop==='all'||e.prop===prop||e.prop==='both')).map(e=>
+    `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-size:12px">${t(e.type)}</td><td style="padding:6px 12px;font-size:11px;color:var(--text2)">${e.desc||'—'}</td><td style="padding:6px 12px;font-size:12px;font-weight:700;color:var(--red)">${fmt(e.amount)}</td><td style="padding:6px 12px;font-size:11px">${t(e.paidBy)} · ${e.date}</td></tr>`
+  ).join('');
+
+  const hoRows=handovers.filter(h=>h.month===m).map(h=>
+    `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-size:12px">${h.date}</td><td style="padding:6px 12px;font-size:12px">${t(h.mode||'cash')}</td><td style="padding:6px 12px;font-size:12px;font-weight:700;color:var(--green)">${fmt(h.amount)}</td><td style="padding:6px 12px;font-size:11px;color:var(--text2)">${h.notes||'—'}</td></tr>`
+  ).join('');
+
+  document.getElementById('reportContent').innerHTML=`
+    <div class="report-card">
+      <div class="report-title">${monthLabel(m)}</div>
+      <div class="report-sub">${propLabel} · Generated ${new Date().toLocaleDateString()}</div>
+      <div class="report-grid">
+        <div class="report-stat"><div class="rv">${fmt(collected)}</div><div class="rl">Rent Collected</div></div>
+        <div class="report-stat"><div class="rv">${fmt(pending)}</div><div class="rl">Pending</div></div>
+        <div class="report-stat"><div class="rv">${fmt(exp)}</div><div class="rl">Expenses</div></div>
+        <div class="report-stat"><div class="rv">${fmt(ho)}</div><div class="rl">Handed Over</div></div>
+      </div>
+      <div class="report-net"><div class="rn-lbl">${lang==='ta'?'நிகர இருப்பு (அப்பா கொடுக்க வேண்டியது)':'Net Balance (Father Owes)'}</div><div class="rn-val">${fmt(bal)}</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Rent Details</div>
+    <div class="card" style="margin-bottom:12px;overflow:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr><th style="${th}">Unit</th><th style="${th}">Tenant</th><th style="${th}">Paid / Expected</th><th style="${th}">Status</th></tr></thead>
+      <tbody>${unitRows||'<tr><td colspan="4" style="padding:14px;text-align:center;font-size:12px;color:var(--text3)">No units</td></tr>'}</tbody>
+    </table></div>
+    ${expRows?`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Expenses</div><div class="card" style="margin-bottom:12px;overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th}">Type</th><th style="${th}">Description</th><th style="${th}">Amount</th><th style="${th}">By · Date</th></tr></thead><tbody>${expRows}</tbody></table></div>`:''}
+    ${hoRows?`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Handovers</div><div class="card" style="overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th}">Date</th><th style="${th}">Mode</th><th style="${th}">Amount</th><th style="${th}">Notes</th></tr></thead><tbody>${hoRows}</tbody></table></div>`:''}
+  `;
+}
+
+// ══════════════════════════════════════════
+//  EXPORT / IMPORT
+// ══════════════════════════════════════════
+function exportData(){
+  const data={properties,units,rentRecords,expenses,handovers};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=`vk-backup-${curMonth}.json`;a.click();URL.revokeObjectURL(url);
+}
+function importData(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+    r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
+      if(d.units)units=d.units;if(d.properties)properties=d.properties;
+      if(d.rentRecords)rentRecords=d.rentRecords;if(d.expenses)expenses=d.expenses;
+      if(d.handovers)handovers=d.handovers;persistLocal();render();showToast('Imported!');}
+    catch{showToast('Invalid file');}};r.readAsText(f);};inp.click();
+}
+function clearAll(){
+  if(!confirm('Clear ALL local data?'))return;
+  units=[];rentRecords=[];expenses=[];handovers=[];
+  properties={A:{name:'Property A',address:''},B:{name:'Property B',address:''}};
+  persistLocal();render();showToast('Cleared.');
+}
+
+// ══════════════════════════════════════════
+//  PWA — Service Worker + Install Prompt
+// ══════════════════════════════════════════
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('SW registration failed:',err));
+  });
+}
+
+let deferredInstallPrompt=null;
+const INSTALL_DISMISSED_KEY='vk_install_dismissed';
+
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+  if(!load(INSTALL_DISMISSED_KEY,false) && !isStandalone()){
+    document.getElementById('installBanner').classList.add('show');
+  }
+});
+
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+}
+
+async function triggerInstall(){
+  if(!deferredInstallPrompt){
+    showToast(lang==='ta'?'முகப்புத் திரையில் சேர்க்க உலாவி மெனுவைப் பயன்படுத்தவும்':'Use your browser menu → Add to Home Screen');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const choice=await deferredInstallPrompt.userChoice;
+  if(choice.outcome==='accepted'){
+    showToast(lang==='ta'?'நிறுவப்பட்டது!':'App installed!');
+  }
+  deferredInstallPrompt=null;
+  document.getElementById('installBanner').classList.remove('show');
+}
+
+function dismissInstallBanner(){
+  document.getElementById('installBanner').classList.remove('show');
+  save(INSTALL_DISMISSED_KEY,true);
+}
+
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('installBanner').classList.remove('show');
+  save(INSTALL_DISMISSED_KEY,true);
+});
+
+// Hide banner entirely if already running as installed app
+if(isStandalone()){
+  const banner=document.getElementById('installBanner');
+  if(banner)banner.style.display='none';
+}
+
+// INIT
+document.getElementById('expDate').value=todayStr();
+document.getElementById('hoDate').value=todayStr();
+applyLang();
+render();
+</script>
+</body>
+</html>
