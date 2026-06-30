@@ -9,10 +9,10 @@
 <meta name="apple-mobile-web-app-title" content="வாடகை கணக்கு"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <link rel="manifest" href="./manifest.json"/>
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png"/>
-<link rel="apple-touch-icon" href="./icon-192.png"/>
-<link rel="apple-touch-icon" sizes="152x152" href="./icon-152.png"/>
-<link rel="apple-touch-icon" sizes="180x180" href="./icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
+<link rel="apple-touch-icon" href="./icons/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-192.png"/>
 <title>வாடகை கணக்கு — Rental Tracker</title>
 
 <!-- Firebase -->
@@ -1111,6 +1111,14 @@ function saveRent(){
   showToast(lang==='ta'?'வாடகை சேமிக்கப்பட்டது!':'Rent saved!');
 }
 
+function deleteRentRecord(recId,unitId){
+  if(!confirm('Delete this rent entry?'))return;
+  const rec=rentRecords.find(r=>r.id===recId);
+  rentRecords=rentRecords.filter(r=>r.id!==recId);
+  if(db&&rec)fbDel('rentRecords',unitId+'_'+rec.month);
+  persistLocal();render();
+}
+
 // ══════════════════════════════════════════
 //  EXPENSES
 // ══════════════════════════════════════════
@@ -1199,7 +1207,13 @@ function editUnit(id){
 function deleteUnit(id){
   if(!confirm('Delete unit?'))return;
   units=units.filter(u=>u.id!==id);
-  if(db)fbDel('units',id);
+  // Cascade delete: remove related rent records and clean Firebase docs
+  const relatedRents=rentRecords.filter(r=>r.unitId===id);
+  rentRecords=rentRecords.filter(r=>r.unitId!==id);
+  if(db){
+    fbDel('units',id);
+    relatedRents.forEach(r=>fbDel('rentRecords',id+'_'+r.month));
+  }
   persistLocal();render();
 }
 function saveUnit(){
@@ -1277,6 +1291,7 @@ function unitRentRow(u,forDash){
   const modeTag=rec&&rec.payMode?`<span style="font-size:10px;background:var(--surface2);border-radius:4px;padding:1px 5px;">${t(rec.payMode)}</span>`:'';
   const rcvTag=rec&&rec.receivedBy?`<span style="font-size:10px;color:var(--text3);">${t(rec.receivedBy)}</span>`:'';
   const pencilBtn=forDash?'':`<button class="edit-rent-btn" onclick="openRentModal('${u.id}')" title="Edit rent">${ICON_EDIT}</button>`;
+  const deleteBtn=(forDash||!rec)?'':`<button class="edit-rent-btn" onclick="deleteRentRecord('${rec.id}','${u.id}')" title="Delete entry">${ICON_TRASH}</button>`;
 
   return `<div class="unit-row">
     <div class="unit-avatar" style="background:${bg}">${icon}</div>
@@ -1290,7 +1305,7 @@ function unitRentRow(u,forDash){
     <div class="unit-actions">
       <div class="unit-amt" style="color:${col}">${fmt(paidAmt)}</div>
       <span class="unit-status-tag ${tagClass}">${t(status)}${status==='partial'?' '+pct+'%':''}</span>
-      ${pencilBtn}
+      <div style="display:flex;gap:4px;">${pencilBtn}${deleteBtn}</div>
     </div>
   </div>`;
 }
